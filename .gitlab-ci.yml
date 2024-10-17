@@ -1,0 +1,65 @@
+stages:
+  - validate
+  - plan
+  - apply
+  - destroy
+# variables:
+#   TF_VERSION: "1.5.0" # Specify the Terraform version you want to use
+
+image: ubuntu:20.04
+before_script:
+  - apt-get update && apt-get install -y curl unzip
+  - curl -LO "https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip"
+  - unzip terraform_1.5.0_linux_amd64.zip
+  - mv terraform /usr/local/bin/
+  - chmod +x /usr/local/bin/terraform
+  - terraform --version
+  - terraform init
+
+
+validate:
+  stage: validate
+  script:
+    - echo "Initializing Terraform"
+    - terraform init   
+    - echo "Validating Terraform configuration"
+    - terraform validate   
+  only:
+    - merge_requests
+    - main
+
+plan:
+  stage: plan
+  script:
+    - echo "Initializing Terraform"
+    - terraform init   
+    - echo "Generating Terraform plan"
+    - terraform plan -out=tfplan
+  artifacts:
+    paths:
+      - tfplan
+  only:
+    - merge_requests
+    - main
+
+apply:
+  stage: apply
+  script:
+    - echo "Initializing Terraform"
+    - terraform init   
+    - echo "Applying Terraform changes"
+    - terraform apply -auto-approve tfplan
+  only:
+    - main
+  when: manual
+
+destroy:
+  stage: destroy
+  script:
+    - echo "Initializing Terraform"
+    - terraform init   
+    - echo "Destroying Terraform resources"
+    - terraform destroy -auto-approve
+  only:
+    - main
+  when: manual    
